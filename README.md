@@ -6,8 +6,24 @@ This agent can also help to transport file to/from remote host.
 # Install 
 ```
 go build
-./shell_agent
+./shell_agent 
 ```
+Now you can visit the agent via 8080 port.
+
+The usage is simple:
+```
+Shell Agent.
+
+        Usage:
+        shell_agent [--cnf=<path>] [--addr=<addr>]
+        shell_agent -h | --help
+        shell_agent --version
+
+        Options:
+        --cnf=<path>  config file path [default: ].
+        --addr=<addr>  config file path [default: :8080].
+```
+
 
 
 # Execute command
