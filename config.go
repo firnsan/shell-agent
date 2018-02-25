@@ -6,36 +6,40 @@ import (
 )
 
 type Config struct {
-	Addr        string // 监听地址
-	LogDir      string // 日志所在目录
-	LogLevel    string // 日志等级
-	AdminSecret string
-	DbConnect   string
-	cnfPath     string
-	innerCnf    config.Configer
+	Addr     string 
+	LogDir   string 
+	LogLevel string
+	cnfPath  string
+	innerCnf config.Configer
 }
 
-func NewConfig(cnfPath string) (*Config, error) {
-	var err error
-	cnf := &Config{cnfPath: cnfPath}
+func NewConfig() (*Config) {
+	cnf := &Config{}
+	return cnf
+}
 
-	err = cnf.Reload()
+func (o *Config) Load(cnfPath string) error {
+	var err error
+	o.cnfPath = cnfPath
+
+	err = o.Reload()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	cnf.Addr = cnf.innerCnf.DefaultString("addr", ":8080")
-	cnf.DbConnect = cnf.innerCnf.DefaultString("db_connect", "root:@tcp(localhost:3306)/vpn")
-	cnf.AdminSecret = cnf.innerCnf.DefaultString("admin_secret", "none")
-	return cnf, nil
+	return nil
 }
 
 func (o *Config) Reload() error {
 	var err error
-	o.innerCnf, err = config.NewConfig("ini", o.cnfPath)
-	if err != nil {
-		log.Error(err)
-		return err
+	if o.cnfPath != "" {
+		o.innerCnf, err = config.NewConfig("ini", o.cnfPath)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		o.innerCnf = config.NewFakeConfig()
 	}
 
 	o.LogDir = o.innerCnf.DefaultString("log::dir", "../log")

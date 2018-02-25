@@ -15,7 +15,7 @@ type Application struct {
 }
 
 func NewApplication() *Application {
-	return &Application{cnfPath: "../etc/app.cnf"}
+	return &Application{Cnf: NewConfig()}
 }
 
 func (o *Application) GetVersion() string {
@@ -23,20 +23,22 @@ func (o *Application) GetVersion() string {
 }
 
 func (o *Application) GetUsage() string {
-	return `Tar Stream Server.
+	return `Shell Agent.
 
 	Usage:
-	tar_stream [--cnf=<path>]
-	tar_stream -h | --help
-	tar_stream --version
+	shell_agent [--cnf=<path>] [--addr=<addr>]
+	shell_agent -h | --help
+	shell_agent --version
 
 	Options:
-	--cnf=<path>  config file path [default: ../etc/app.cnf].`
+	--cnf=<path>  config file path [default: ].
+	--addr=<addr>  config file path [default: :8080].`
 
 }
 
 func (o *Application) OnOptParsed(m map[string]interface{}) {
 	o.cnfPath = m["--cnf"].(string)
+	o.Cnf.Addr = m["--addr"].(string)
 }
 
 func (o *Application) OnReload() error {
@@ -73,7 +75,7 @@ func (o *Application) Run() {
 	var err error
 
 	// Load the config
-	o.Cnf, err = NewConfig(o.cnfPath)
+	err = o.Cnf.Load(o.cnfPath)
 	if err != nil {
 		log.Fatalf("init config failed: %s", err)
 	}
