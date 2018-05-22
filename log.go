@@ -13,13 +13,13 @@ func InitLog() error {
 	var err error
 	level, err := log.ParseLevel(gApp.Cnf.LogLevel)
 	if err != nil {
-		log.Errorf("parse log level failed: %s", err)
+		log.Errorf("Parse log level failed: %s", err)
 		return err
 	}
 
 	fw, err := rotater.NewFileRotater(gApp.Cnf.LogDir + "/app.log")
 	if err != nil {
-		log.Errorf("set log failed: %s", err)
+		log.Errorf("Set log failed: %s", err)
 		return err
 	}
 
@@ -46,7 +46,7 @@ func UninitLog() {
 		wc.Close()
 	}
 
-	log.Printf("uninit log success")
+	log.Printf("Uninit log success")
 }
 
 type AlarmHook struct {
@@ -83,10 +83,10 @@ func (o *AlarmHook) alarm(msg string, alarmId string) error {
 	if msg == "" || alarmId == "" {
 		return nil
 	}
-	log.Printf("excute alarm cmd, msg: %s, id: %s", msg, alarmId)
+	log.Printf("Execute alarm cmd, msg: %s, id: %s", msg, alarmId)
 	cmd := exec.Command("./alarm.sh", msg, alarmId)
 	if err = cmd.Run(); err != nil {
-		log.Printf("excute alarm cmd error: %s", err)
+		log.Printf("Execute alarm cmd error: %s", err)
 		return err
 	}
 	return nil
