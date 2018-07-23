@@ -57,7 +57,7 @@ Take a careful look at the response:
 ```
 The returned http response contain: 
 * id: UUID of the job .
-* status: Status of the job, maybe running, finished(the command exited with zero exit code), failed(the command failed to start, or be killed, or exited with non-zero exit code)
+* status: Status of the job, maybe **running**, **finished**(the command exited with zero exit code), **failed**(the command failed to start, or be killed, or exited with non-zero exit code), **canceled**(canceled by user)
 * error: The reason why the job failed.
 * stdout: Stdout of the command.
 * stderr: Stderr of the command.
