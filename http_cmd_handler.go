@@ -9,26 +9,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os/exec"
-	"sync"
+	"strings"
 	"syscall"
 	"time"
 )
-
-type Job struct {
-	Id         string    `json:"id"`
-	Status     JobStatus `json:"status"`
-	Error      string    `json:"error"` // Error msg when fork & exec
-	Cmd        string    `json:"cmd"`
-	Dir        string    `json:"dir"`
-	Env        []string  `json:"env"`
-	Stdout     string    `json:"stdout"`
-	Stderr     string    `json:"stderr"`
-	ExitCode   int       `json:"exit_code"`
-	Pid        int       `json:"pid"`
-	CreateTime time.Time `json:"create_time"`
-	FinishTime time.Time `json:"finish_time"`
-	cancelFunc context.CancelFunc
-}
 
 type RunCmdReq struct {
 	Cmd   string   `json:"cmd"`
@@ -37,31 +21,11 @@ type RunCmdReq struct {
 	Env   []string `json:"env,omitempty"`
 }
 
+type QueryCmdRes Job
 type SyncRunCmdRes Job
 type AsyncRuncmdRes struct {
 	Id         string    `json:"id"`
 	CreateTime time.Time `json:"create_time"`
-}
-
-type JobBookkeeper struct {
-	Jobs map[string]*Job
-	Lock sync.RWMutex
-}
-
-func NewJobBookkeeper() *JobBookkeeper {
-	return &JobBookkeeper{
-		Jobs: map[string]*Job{},
-		Lock: sync.RWMutex{},
-	}
-}
-
-func (o *JobBookkeeper) Add(j *Job) {
-	o.Lock.Lock()
-	defer o.Lock.Unlock()
-	if j == nil {
-		return
-	}
-	o.Jobs[j.Id] = j
 }
 
 var (
@@ -86,20 +50,20 @@ func RunCmdHandler(w http.ResponseWriter, r *http.Request) {
 	var req RunCmdReq
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Errorf("Failed to read r.Body: %s", err)
-		ServeJSON(w, NewResponse().SetError(ECUnknown, "Failed to read r.Body"))
+		log.Errorf("failed to read r.Body: %s", err)
+		ServeJSON(w, NewResponse().SetError(ECUnknown, "failed to read body"))
 		return
 	}
 	defer r.Body.Close()
 
 	if err := json.Unmarshal(body, &req); err != nil {
-		log.Errorf("Failed to unmarshall data: %s", err)
-		ServeJSON(w, NewResponse().SetError(ECUnknown, "Failed to unmarshall data"))
+		log.Errorf("failed to unmarshall data: %s", err)
+		ServeJSON(w, NewResponse().SetError(ECUnknown, "failed to unmarshall data"))
 		return
 	}
 
 	if req.Cmd == "" {
-		ServeJSON(w, NewResponse().SetError(ECInvalidParam, "Param cmd is empty"))
+		ServeJSON(w, NewResponse().SetError(ECInvalidParam, "param cmd is empty"))
 		return
 	}
 
@@ -113,8 +77,8 @@ func RunCmdHandler(w http.ResponseWriter, r *http.Request) {
 
 	u4, err := uuid.NewV4()
 	if err != nil {
-		log.Errorf("Failed to genereate uuid: %s", err)
-		ServeJSON(w, NewResponse().SetError(ECUnknown, "Failed to generate uuid"))
+		log.Errorf("failed to genereate uuid: %s", err)
+		ServeJSON(w, NewResponse().SetError(ECUnknown, "failed to generate uuid"))
 		return
 	}
 	job.Id = u4.String()
@@ -156,7 +120,7 @@ func cmdWorker(ctx context.Context, job *Job) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Infof("Running cmd: %s", job.Cmd)
+	log.Infof("running cmd: %s", job.Cmd)
 	err = cmd.Start()
 	if err != nil {
 		log.Errorf("cmd.Start failed: %s", err)
@@ -175,7 +139,7 @@ func cmdWorker(ctx context.Context, job *Job) {
 		case <-ctx.Done():
 			canceled = true
 			cmd.Process.Kill()
-			log.Info("Canceling the process: ", cmd.Process.Pid)
+			log.Info("canceling the process: ", cmd.Process.Pid)
 		case <-doneC:
 		}
 	}()
@@ -197,39 +161,55 @@ func cmdWorker(ctx context.Context, job *Job) {
 		job.Status = JSFailed
 
 	} else {
-		log.Info("Process finished: ", cmd.Process.Pid)
+		log.Info("process finished: ", cmd.Process.Pid)
 		job.Status = JSFinished
 	}
 
 	// If has been canceled by user
 	if canceled {
-		log.Warn("Process canceled: ", cmd.Process.Pid)
+		log.Warn("process canceled: ", cmd.Process.Pid)
 		job.Error = err.Error()
 		job.Status = JSCanceled
 	}
 
 }
 
-/*
-func (o *InstanceController) CancelConsistencyCheck() {
-	var err error
-	var job models.ConsistencyCheckJob
-	db := orm.NewOrm()
-	id, err := strconv.Atoi(o.Ctx.Input.Param(":instance_id"))
-	if id <= 0 || err != nil {
-		o.Data["json"] = NewResponse().SetError(ECInvalidParam, "invalid instance")
-		o.ServeJSON()
+// Handler to query the job info by job id
+func QueryCmdHandler(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.FormValue("id"))
+	if id == "" {
+		ServeJSON(w, NewResponse().SetError(ECInvalidParam, "param id is empty"))
 		return
 	}
-	if cancelFunc, ok := globalConsistencyCheckJobContext[job.Id]; ok {
-		cancelFunc()
-		o.Data["json"] = NewResponse()
-		o.ServeJSON()
-		return
-	} else {
-		o.Data["json"] = NewResponse().SetError(ECUnknown, "the job is lost")
-		o.ServeJSON()
+	job := gJobBookkeeper.Get(id)
+	if job == nil {
+		ServeJSON(w, NewResponse().SetError(ECJobNotFound, "job not found: "+id))
 		return
 	}
+	resp := (*QueryCmdRes)(job)
+	ServeJSON(w, NewResponse().SetData(resp))
+
 }
-*/
+
+func ListCmdHandler(w http.ResponseWriter, r *http.Request) {
+	jobs := gJobBookkeeper.GetAll()
+	ServeJSON(w, NewResponse().SetData(jobs))
+}
+
+// Handler to cancel the job by job id
+func CancelCmdHandler(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.FormValue("id"))
+	job := gJobBookkeeper.Get(id)
+	if job == nil {
+		ServeJSON(w, NewResponse().SetError(ECJobNotFound, "job not found: "+id))
+		return
+	}
+	if job.Status != JSRunning {
+		ServeJSON(w, NewResponse().SetError(ECJobNotRunning, "job is not running: "+id))
+		return
+	}
+	// Cancel the job
+	job.cancelFunc()
+	ServeJSON(w, NewResponse())
+	return
+}

@@ -71,3 +71,30 @@ The returned http response only contain the job id, which can be use to query jo
 curl -d '{"cmd":"sleep 600 && echo test sleep", "async":true}' http://127.0.0.1:8080/api/v1/cmd/run  
 {"errno":0,"error":"succeed","data":{"id":"3dcb8bb9-5aab-4a5c-7575-fa11294d2dff","create_time":"2018-02-25T19:38:38.539287299+08:00"}}
 ```
+The returned http response contain:
+* id: UUID of the job .
+
+
+# Query a job
+You can use the job id to query the job info:
+
+```
+curl http://127.0.0.1:8080/api/v1/cmd/query?id=3dcb8bb9-5aab-4a5c-7575-fa11294d2dff
+
+```
+
+# Cancel a job
+You can cancel a runnning job:
+```
+curl http://127.0.0.1:8080/api/v1/cmd/cancel?id=3dcb8bb9-5aab-4a5c-7575-fa11294d2dff
+
+```
+
+# List all command jobs
+You can get all jobs ordered by create time desc:
+
+```
+curl http://127.0.0.1:8080/api/v1/cmd/list
+
+```
+

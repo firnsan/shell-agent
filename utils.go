@@ -12,6 +12,8 @@ const (
 	ECSuccess ErrorCode = 0
 	ECUnknown           = iota + 1000
 	ECInvalidParam
+	ECJobNotFound
+	ECJobNotRunning
 )
 
 type JobStatus string

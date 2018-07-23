@@ -24,13 +24,15 @@ func (o *Application) GetVersion() string {
 
 func (o *Application) GetUsage() string {
 	return `Shell Agent.
+This agnet is a program installed on remote host, help you to execute shell command on the remote host.
+This agent can also help to transport file to/from remote host.
 
-	Usage:
-	shell_agent [--cnf=<path>] [--addr=<addr>]
-	shell_agent -h | --help
-	shell_agent --version
+Usage:
+	shell-agent [--cnf=<path>] [--addr=<addr>]
+	shell-agent -h | --help
+	shell-agent --version
 
-	Options:
+Options:
 	--cnf=<path>  config file path [default: ].
 	--addr=<addr>  config file path [default: :8080].`
 

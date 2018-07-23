@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	Addr     string 
-	LogDir   string 
+	Addr     string
+	LogDir   string
 	LogLevel string
 	cnfPath  string
 	innerCnf config.Configer
 }
 
-func NewConfig() (*Config) {
+func NewConfig() *Config {
 	cnf := &Config{}
 	return cnf
 }

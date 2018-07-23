@@ -118,6 +118,9 @@ func ServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc(apiUrlPrefix+"/cmd/run", RunCmdHandler)
+	mux.HandleFunc(apiUrlPrefix+"/cmd/query", QueryCmdHandler)
+	mux.HandleFunc(apiUrlPrefix+"/cmd/list", ListCmdHandler)
+	mux.HandleFunc(apiUrlPrefix+"/cmd/cancel", CancelCmdHandler)
 	mux.HandleFunc(apiUrlPrefix+"/status/mem", StatusMemHandler)
 
 	return mux
