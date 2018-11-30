@@ -107,6 +107,7 @@ func (o *HttpServer) Stop() {
 		return
 	}
 	o.stopped = true
+	o.cancle()
 	o.ln.Close()
 	o.wg.Wait()
 }
