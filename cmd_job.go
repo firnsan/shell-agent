@@ -80,3 +80,13 @@ func (o *JobBookkeeper) GetAll() []*Job {
 	sort.Sort(sort.Reverse(jobs))
 	return jobs
 }
+
+func (o *JobBookkeeper) Expire() {
+	o.Lock.Lock()
+	defer o.Lock.Unlock()
+	for k, v := range o.Jobs {
+		if time.Hour*24*3 < time.Now().Sub(v.FinishTime) {
+			delete(o.Jobs, k)
+		}
+	}
+}
