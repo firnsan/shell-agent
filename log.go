@@ -2,7 +2,7 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	rotater "github.com/firnsan/file-rotater"
+	rotator "github.com/firnsan/file-rotator"
 	"io"
 	stdlog "log"
 	"os"
@@ -17,7 +17,7 @@ func InitLog() error {
 		return err
 	}
 
-	fw, err := rotater.NewFileRotater(gApp.Cnf.LogDir + "/app.log")
+	fw, err := rotator.NewFileRotator(gApp.Cnf.LogDir + "/app.log")
 	if err != nil {
 		log.Errorf("set log failed: %s", err)
 		return err
