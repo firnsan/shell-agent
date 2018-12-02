@@ -21,12 +21,6 @@
 			"revisionTime": "2018-01-11T23:17:33Z"
 		},
 		{
-			"checksumSHA1": "d7yO+ITPFHiLhHMqF/CY7ScxsFE=",
-			"path": "github.com/firnsan/file_rotater",
-			"revision": "2683612c2e4283e155e277d411330f2f664bcbce",
-			"revisionTime": "2018-07-03T05:07:32Z"
-		},
-		{
 			"checksumSHA1": "nYaWjtJCFam3Vex+ULtuLO4TFq0=",
 			"path": "github.com/firnsan/incubator",
 			"revision": "efcae1be88428b4268a75d17949282dae7a5d82a",

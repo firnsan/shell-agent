@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	log "github.com/Sirupsen/logrus"
 	"sort"
 	"sync"
 	"time"
@@ -36,32 +37,54 @@ func (o Jobs) Less(i, j int) bool {
 }
 
 type JobBookkeeper struct {
-	Jobs map[string]*Job
-	Lock sync.RWMutex
+	expireDays int
+
+	jobs map[string]*Job
+
+	quitC  chan struct{}
+	cancel context.CancelFunc
+
+	sync.RWMutex
 }
 
-func NewJobBookkeeper() *JobBookkeeper {
-	return &JobBookkeeper{
-		Jobs: map[string]*Job{},
-		Lock: sync.RWMutex{},
+func NewJobBookkeeper(expireDays int) *JobBookkeeper {
+	if expireDays <= 0 {
+		expireDays = 7
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	o := JobBookkeeper{
+		expireDays: expireDays,
+		jobs:       make(map[string]*Job),
+		quitC:      make(chan struct{}),
+		cancel:     cancel,
+	}
+	go o.checkExpire(ctx)
+	return &o
+}
+
+func (o *JobBookkeeper) Close() error {
+	o.cancel()
+	<-o.quitC
+	return nil
 }
 
 // Record the job's info
 func (o *JobBookkeeper) Add(j *Job) {
-	o.Lock.Lock()
-	defer o.Lock.Unlock()
+	o.Lock()
+	defer o.Unlock()
 	if j == nil {
 		return
 	}
-	o.Jobs[j.Id] = j
+	o.jobs[j.Id] = j
 }
 
 // Get the job info by id
 func (o *JobBookkeeper) Get(id string) *Job {
-	o.Lock.Lock()
-	defer o.Lock.Unlock()
-	if j, ok := o.Jobs[id]; ok {
+	o.Lock()
+	defer o.Unlock()
+	if j, ok := o.jobs[id]; ok {
 		return j
 	} else {
 		return nil
@@ -70,23 +93,43 @@ func (o *JobBookkeeper) Get(id string) *Job {
 
 // Get all jobs ordered by create time desc
 func (o *JobBookkeeper) GetAll() []*Job {
-	o.Lock.Lock()
-	defer o.Lock.Unlock()
+	o.Lock()
+	defer o.Unlock()
 	// The job that
 	var jobs Jobs
-	for _, j := range o.Jobs {
+	for _, j := range o.jobs {
 		jobs = append(jobs, j)
 	}
 	sort.Sort(sort.Reverse(jobs))
 	return jobs
 }
 
-func (o *JobBookkeeper) Expire() {
-	o.Lock.Lock()
-	defer o.Lock.Unlock()
-	for k, v := range o.Jobs {
-		if time.Hour*24*3 < time.Now().Sub(v.FinishTime) {
-			delete(o.Jobs, k)
+func (o *JobBookkeeper) checkExpire(ctx context.Context) {
+	defer close(o.quitC)
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			o.expire()
+		case <-ctx.Done():
+			return
 		}
 	}
+}
+
+func (o *JobBookkeeper) expire() {
+	o.Lock()
+	defer o.Unlock()
+	purgedCnt := 0
+	for k, j := range o.jobs {
+		if j.Status == JSRunning {
+			continue
+		}
+		if time.Duration(o.expireDays)*time.Hour*24 < time.Now().Sub(j.FinishTime) {
+			delete(o.jobs, k)
+			purgedCnt++
+		}
+	}
+	log.Debugf("purged %d outdated jobs", purgedCnt)
 }

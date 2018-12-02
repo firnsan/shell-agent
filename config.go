@@ -9,6 +9,9 @@ type Config struct {
 	Addr     string
 	LogDir   string
 	LogLevel string
+
+	ExpireDays int
+
 	cnfPath  string
 	innerCnf config.Configer
 }
@@ -44,6 +47,8 @@ func (o *Config) Reload() error {
 
 	o.LogDir = o.innerCnf.DefaultString("log::dir", "../log")
 	o.LogLevel = o.innerCnf.DefaultString("log::level", "info")
+
+	o.ExpireDays = o.innerCnf.DefaultInt("expire_days", 7)
 
 	return nil
 }

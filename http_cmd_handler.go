@@ -33,16 +33,17 @@ var (
 )
 
 func init() {
-	gHttpServer.AddToInit(InitUserHandler)
-	gHttpServer.AddToUninit(UninitUserHandler)
+	gHttpServer.AddToInit(InitCmdHandler)
+	gHttpServer.AddToUninit(UninitCmdHandler)
 }
 
-func InitUserHandler() error {
-	gJobBookkeeper = NewJobBookkeeper()
+func InitCmdHandler() error {
+	gJobBookkeeper = NewJobBookkeeper(gApp.Cnf.ExpireDays)
 	return nil
 }
 
-func UninitUserHandler() {
+func UninitCmdHandler() {
+	gJobBookkeeper.Close()
 }
 
 func RunCmdHandler(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +121,7 @@ func cmdWorker(ctx context.Context, job *Job) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Infof("running cmd: %s", job.Cmd)
+	log.Infof("running cmd: %s, job id: %s", job.Cmd, job.Id)
 	err = cmd.Start()
 	if err != nil {
 		log.Errorf("cmd.Start failed: %s", err)
@@ -139,7 +140,7 @@ func cmdWorker(ctx context.Context, job *Job) {
 		case <-ctx.Done():
 			canceled = true
 			cmd.Process.Kill()
-			log.Info("canceling the process: ", cmd.Process.Pid)
+			log.Info("canceling the process: ", job.Id)
 		case <-doneC:
 		}
 	}()
@@ -161,13 +162,13 @@ func cmdWorker(ctx context.Context, job *Job) {
 		job.Status = JSFailed
 
 	} else {
-		log.Info("process finished: ", cmd.Process.Pid)
+		log.Info("process finished: ", job.Id)
 		job.Status = JSFinished
 	}
 
 	// If has been canceled by user
 	if canceled {
-		log.Warn("process canceled: ", cmd.Process.Pid)
+		log.Warn("process canceled: ", job.Id)
 		job.Error = err.Error()
 		job.Status = JSCanceled
 	}

@@ -2,7 +2,7 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	rotater "github.com/firnsan/file_rotater"
+	rotater "github.com/firnsan/file-rotater"
 	"io"
 	stdlog "log"
 	"os"

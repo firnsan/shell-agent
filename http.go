@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
@@ -9,15 +8,12 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type HttpServer struct {
 	ln             net.Listener
 	s              http.Server
 	wg             *sync.WaitGroup
-	ctx            context.Context
-	cancle         context.CancelFunc
 	pending        int32
 	stopped        bool
 	started        bool
@@ -26,11 +22,9 @@ type HttpServer struct {
 }
 
 func NewHttpServer() *HttpServer {
-	s := &HttpServer{
+	return &HttpServer{
 		wg: new(sync.WaitGroup),
 	}
-	s.ctx, s.cancle = context.WithCancel(context.Background())
-	return s
 }
 
 var (
@@ -69,7 +63,6 @@ func (o *HttpServer) Run() error {
 		return err
 	}
 	defer o.Uninit()
-	go o.Expire()
 	// Prepare the middleware and http handlers
 	n := negroni.New()
 	mux := ServeMux()
@@ -107,7 +100,6 @@ func (o *HttpServer) Stop() {
 		return
 	}
 	o.stopped = true
-	o.cancle()
 	o.ln.Close()
 	o.wg.Wait()
 }
@@ -118,20 +110,6 @@ func (o *HttpServer) AddToInit(f func() error) {
 
 func (o *HttpServer) AddToUninit(f func()) {
 	o.uninitializers = append(o.uninitializers, f)
-}
-
-func (o *HttpServer) Expire() {
-	timer := time.NewTimer(time.Hour)
-	defer timer.Stop()
-	for o.started {
-		select {
-		case <-timer.C:
-			gJobBookkeeper.Expire()
-		case <-o.ctx.Done():
-			log.Printf("receive cancle,server quit")
-			return
-		}
-	}
 }
 
 func ServeMux() *http.ServeMux {

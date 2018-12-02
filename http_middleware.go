@@ -11,7 +11,7 @@ import (
 func CutServiceMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 
 	if gHttpServer.stopped {
-		log.Print("Http server is quiting, ignore this request")
+		log.Info("Http server is quiting, ignore this request")
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
@@ -40,12 +40,10 @@ func RecoveryMiddleware(rw http.ResponseWriter, r *http.Request, next http.Handl
 
 func LoggerMiddleware(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	start := time.Now()
-	//r.ParseForm()
-	//log.Printf("request recived %s %s", r.Method, r.URL.Path, r.Form)
-	log.Printf("Request recived %s %s", r.Method, r.URL.Path)
+	log.Debugf("Request recived %s %s", r.Method, r.URL.Path)
 
 	next(rw, r)
 
 	res := rw.(negroni.ResponseWriter)
-	log.Printf("Request completed %v in %v", res.Status(), time.Since(start))
+	log.Debugf("Request completed %v in %v", res.Status(), time.Since(start))
 }
